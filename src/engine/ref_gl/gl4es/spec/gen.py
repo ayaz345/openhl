@@ -14,7 +14,7 @@ env = jinja2.Environment(
 
 def args(args, add_type=True):
     return ', '.join(
-        '{} {}'.format(arg['type'], arg['name']) if add_type else arg['name']
+        f"{arg['type']} {arg['name']}" if add_type else arg['name']
         for arg in args
     )
 
@@ -44,14 +44,10 @@ def printf(args):
     types = []
     for arg in args:
         typ = arg['type']
-        if '*' in typ:
-            t = 'p'
-        else:
-            t = printf_lookup.get(typ, 'p')
-
+        t = 'p' if '*' in typ else printf_lookup.get(typ, 'p')
         types.append(t)
 
-    return ', '.join('%' + t for t in types)
+    return ', '.join(f'%{t}' for t in types)
 
 def unconst(s):
     split = s.split(' ')
@@ -64,8 +60,7 @@ env.filters['printf'] = printf
 env.filters['unconst'] = unconst
 
 def split_arg(arg):
-    match = split_re.match(arg)
-    if match:
+    if match := split_re.match(arg):
         return match.groupdict()
     else:
         return {'type': 'unknown', 'name': arg}
@@ -85,12 +80,7 @@ def gen(files, template, guard_name, headers,
             functions = data.items()
 
         for name, args in sorted(functions):
-            props = {}
-            if args:
-                ret = args.pop(0)
-            else:
-                ret = 'void'
-
+            ret = args.pop(0) if args else 'void'
             loadlib = 'LOAD_GLES'
             if name.endswith('_OES_'):
                 loadlib = 'LOAD_GLES_OES'
@@ -99,7 +89,7 @@ def gen(files, template, guard_name, headers,
                 loadlib = 'LOAD_GLES_EXT'
                 name = name[:-5]
 
-            args = [split_arg(arg) for arg in args if not arg == 'void']
+            args = [split_arg(arg) for arg in args if arg != 'void']
             if any(arg.get('type') == 'unknown' for arg in args):
                 continue
 
@@ -114,15 +104,15 @@ def gen(files, template, guard_name, headers,
                 arg['type'].replace(' ', '_').replace('*', '__GENPT__')
                 for arg in [{'type': ret}] + args)
 
-            props.update({
+            props = {} | {
                 'return': ret,
                 'name': name,
                 'args': args,
                 'types': types,
                 'void': ret == 'void',
                 'loadlib': loadlib,
-            })
-            if not types in unique_formats:
+            }
+            if types not in unique_formats:
                 unique_formats.add(types)
                 formats.append(props)
 
@@ -156,14 +146,10 @@ if __name__ == '__main__':
     files = []
     for name in args.yaml.split(','):
         with open(name) as f:
-            data = safe_load(f)
-            if data:
+            if data := safe_load(f):
                 files.append(data)
 
-    if args.cats:
-        cats = args.cats.split(',')
-    else:
-        cats = None
+    cats = args.cats.split(',') if args.cats else None
     print(gen(files, args.template, args.name,
               args.headers, args.deep, cats,
               args.ifdef, args.ifndef))

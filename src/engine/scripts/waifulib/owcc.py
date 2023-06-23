@@ -13,10 +13,7 @@ from waflib.Configure import conf
 def find_owcc(conf):
 	v = conf.env
 	cc = None
-	if v.CC:
-		cc = v.CC
-	else:
-		cc = conf.find_program('cc', var='CC')
+	cc = v.CC if v.CC else conf.find_program('cc', var='CC')
 	if not cc:
 		conf.fatal('owcc was not found')
 
@@ -24,7 +21,7 @@ def find_owcc(conf):
 		out = conf.cmd_and_log(cc + ['-v'])
 	except Errors.WafError:
 		conf.fatal('%r -v could not be executed' % cc)
-	if not 'Open Watcom' in out:
+	if 'Open Watcom' not in out:
 		conf.fatal('failed to detect owcc')
 
 	v.CC = cc

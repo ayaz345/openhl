@@ -50,8 +50,8 @@ class xshlib(ccroot.link_task):
 				self.env.LD_RELOCATABLE_FLAGS.append('-melf_i386')
 
 		base = self.generator.path
-		target_unstripped = base.find_or_declare('%s.unstripped.o'% target)
-		target_stripped = base.find_or_declare('%s.o'% target)
+		target_unstripped = base.find_or_declare(f'{target}.unstripped.o')
+		target_stripped = base.find_or_declare(f'{target}.o')
 
 		self.set_outputs(target_unstripped)
 		self.generator.objcopy_task= self.generator.create_task('objcopy_relocatable_lib', target_unstripped, target_stripped)
@@ -75,16 +75,17 @@ def apply_static(main, *reloc):
 		"generate library list"
 
 		libraries = reloc
-		externs = '\n'.join(['extern table_t lib_%s_exports[];' % e for e in libraries])
+		externs = '\n'.join([f'extern table_t lib_{e}_exports[];' for e in libraries])
 		table = '\n'.join(['{ "%s", &lib_%s_exports },' % (e, e) for e in libraries])
 		out_node.write('%s\nstruct {const char *name;void *func;} libs[] = {\n%s\n{0,0}\n};\n' % (externs, table ))
+
 
 
 	def write_export_list(name, in_node, out_node):
 		"generate exports list for library"
 
 		exports = in_node.read().splitlines()
-		externs = '\n'.join(['extern void %s(void);' % e for e in exports])
+		externs = '\n'.join([f'extern void {e}(void);' for e in exports])
 		table = '\n'.join(['{ "%s", &%s },' % (e, e) for e in exports])
 		out_node.write('%s\nstruct {const char *name;void *func;} lib_%s_exports[] = {\n%s\n{0,0}\n};\n' % (externs, name, table ))
 

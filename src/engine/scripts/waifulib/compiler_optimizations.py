@@ -124,12 +124,12 @@ def options(opt):
 
 def configure(conf):
 	conf.start_msg('Build type')
-	if conf.options.BUILD_TYPE == None:
+	if conf.options.BUILD_TYPE is None:
 		conf.end_msg('not set', color='RED')
 		conf.fatal('Set a build type, for example "-T release"')
-	elif not conf.options.BUILD_TYPE in VALID_BUILD_TYPES:
+	elif conf.options.BUILD_TYPE not in VALID_BUILD_TYPES:
 		conf.end_msg(conf.options.BUILD_TYPE, color='RED')
-		conf.fatal('Invalid build type. Valid are: %s' % ', '.join(VALID_BUILD_TYPES))
+		conf.fatal(f"Invalid build type. Valid are: {', '.join(VALID_BUILD_TYPES)}")
 	conf.end_msg(conf.options.BUILD_TYPE)
 
 	conf.msg('LTO build', 'yes' if conf.options.LTO else 'no')

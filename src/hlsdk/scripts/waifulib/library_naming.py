@@ -103,11 +103,8 @@ def configure(conf):
 			buildarch += "4"
 		else:
 			raise conf.fatal('Unknown ARM')
-		
-		if conf.env.XASH_ARM_HARDFP:
-			buildarch += "hf"
-		else:
-			buildarch += "l"
+
+		buildarch += "hf" if conf.env.XASH_ARM_HARDFP else "l"
 	elif conf.env.XASH_MIPS and conf.env.XASH_BIG_ENDIAN:
 		buildarch = "mips"
 	elif conf.env.XASH_MIPS and conf.env.XASH_LITTLE_ENDIAN:
@@ -119,17 +116,18 @@ def configure(conf):
 	else:
 		raise conf.fatal("Place your architecture name in build.h and library_naming.py!\n"
 			"If this is a mistake, try to fix conditions above and report a bug")
-	
+
 	conf.env.revert()
-	
-	if buildos == 'android':
+
+	if (
+		buildos == 'android'
+		or (buildos == '' or buildarch == '')
+		and buildarch == ''
+	):
 		# force disable for Android, as Android ports aren't distributed in normal way and doesn't follow library naming
 		conf.env.POSTFIX = ''
-	elif buildos != '' and buildarch != '':
-		conf.env.POSTFIX = '_%s_%s' % (buildos,buildarch)
-	elif buildarch != '':
-		conf.env.POSTFIX = '_%s' % buildarch
+	elif buildos != '':
+		conf.env.POSTFIX = f'_{buildos}_{buildarch}'
 	else:
-		conf.env.POSTFIX = ''
-	
+		conf.env.POSTFIX = f'_{buildarch}'
 	conf.end_msg(conf.env.POSTFIX)

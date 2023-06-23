@@ -18,7 +18,7 @@ def configure(conf):
 	if conf.env.DEST_BINFMT in ['elf', 'mac-o']:
 		conf.find_program('strip', var='STRIP')
 		if not conf.env.STRIPFLAGS:
-			conf.env.STRIPFLAGS = os.environ['STRIPFLAGS'] if 'STRIPFLAGS' in os.environ else []
+			conf.env.STRIPFLAGS = os.environ.get('STRIPFLAGS', [])
 
 def copy_fun(self, src, tgt):
 	inst_copy_fun(self, src, tgt)

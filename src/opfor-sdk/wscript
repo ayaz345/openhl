@@ -46,10 +46,17 @@ def configure(conf):
 	conf.load('reconfigure')
 
 	conf.start_msg('Build type')
-	if conf.options.BUILD_TYPE == None:
+	if conf.options.BUILD_TYPE is None:
 		conf.end_msg('not set', color='RED')
 		conf.fatal('Please set a build type, for example "-T release"')
-	elif not conf.options.BUILD_TYPE in ['fast', 'release', 'debug', 'nooptimize', 'sanitize', 'none']:
+	elif conf.options.BUILD_TYPE not in [
+		'fast',
+		'release',
+		'debug',
+		'nooptimize',
+		'sanitize',
+		'none',
+	]:
 		conf.end_msg(conf.options.BUILD_TYPE, color='RED')
 		conf.fatal('Invalid build type. Valid are "debug", "release" or "none"')
 	conf.end_msg(conf.options.BUILD_TYPE)

@@ -44,10 +44,7 @@ class Subproject:
 		if ctx.env.DEDICATED and self.dedicated:
 			return False
 
-		if self.utility and not ctx.env.ENABLE_UTILS:
-			return False
-
-		return True
+		return bool(not self.utility or ctx.env.ENABLE_UTILS)
 
 SUBDIRS = [
 	Subproject('public',      dedicated=False, mandatory = True),
@@ -98,7 +95,7 @@ def options(opt):
 	opt.load('compiler_optimizations subproject')
 
 	for i in SUBDIRS:
-		if not i.mandatory and not opt.path.find_node(i.name+'/wscript'):
+		if not i.mandatory and not opt.path.find_node(f'{i.name}/wscript'):
 			i.ignore = True
 			continue
 

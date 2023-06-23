@@ -55,7 +55,7 @@ class Android:
 		source_prop = os.path.join(self.ndk_home, 'source.properties')
 		if os.path.exists(source_prop):
 			with open(source_prop) as ndk_props_file:
-				for line in ndk_props_file.readlines():
+				for line in ndk_props_file:
 					tokens = line.split('=')
 					trimed_tokens = [token.strip() for token in tokens]
 
@@ -65,16 +65,15 @@ class Android:
 			self.ndk_rev = 10
 
 		if self.ndk_rev not in [10, 19, 20]:
-			ctx.fatal('Unknown NDK revision: {}'.format(self.ndk_rev))
+			ctx.fatal(f'Unknown NDK revision: {self.ndk_rev}')
 
 		self.arch = arch
 		if self.arch == 'armeabi-v7a-hard':
-			if self.ndk_rev <= 10:
-				self.arch = 'armeabi-v7a' # Only armeabi-v7a have hard float ABI
-				self.is_hardfloat = True
-			else:
+			if self.ndk_rev > 10:
 				raise Exception('NDK does not support hardfloat ABI')
 
+			self.arch = 'armeabi-v7a' # Only armeabi-v7a have hard float ABI
+			self.is_hardfloat = True
 		self.toolchain = toolchain
 
 		if self.ndk_rev >= 19 or 'clang' in self.toolchain:
@@ -140,10 +139,7 @@ class Android:
 		toolchain_host += '-'
 
 		# Assuming we are building on x86
-		if sys.maxsize > 2**32: 
-			toolchain_host += 'x86_64'
-		else: toolchain_host += 'x86'
-
+		toolchain_host += 'x86_64' if sys.maxsize > 2**32 else 'x86'
 		if self.is_clang():
 			if self.ndk_rev < 19:
 				raise Exception('Clang is not supported for this NDK')
@@ -151,25 +147,25 @@ class Android:
 			toolchain_folder = 'llvm'
 
 			if self.is_x86():
-				triplet = 'i686-linux-android{}-'.format(self.api)
+				triplet = f'i686-linux-android{self.api}-'
 			elif self.is_arm():
-				triplet = 'armv7a-linux-androideabi{}-'.format(self.api)
+				triplet = f'armv7a-linux-androideabi{self.api}-'
 			else:
-				triplet = self.arch + '-linux-android{}-'.format(self.api)
+				triplet = f'{self.arch}-linux-android{self.api}-'
 		else:
 			if self.is_x86() or self.is_amd64():
-				toolchain_folder = self.arch + '-' + self.toolchain
+				toolchain_folder = f'{self.arch}-{self.toolchain}'
 			elif self.is_arm():
-				toolchain_folder = 'arm-linux-androideabi-' + self.toolchain
+				toolchain_folder = f'arm-linux-androideabi-{self.toolchain}'
 			else:
-				toolchain_folder = self.arch + '-linux-android-' + self.toolchain
+				toolchain_folder = f'{self.arch}-linux-android-{self.toolchain}'
 
 			if self.is_x86():
 				triplet = 'i686-linux-android-'
 			elif self.is_arm():
 				triplet = 'arm-linux-androideabi-'
 			else:
-				triplet = self.arch + '-linux-android-'
+				triplet = f'{self.arch}-linux-android-'
 
 		return os.path.join(path, toolchain_folder, 'prebuilt', toolchain_host, 'bin', triplet)
 
@@ -186,20 +182,17 @@ class Android:
 	def sysroot(self):
 		if self.ndk_rev >= 19:
 			return os.path.abspath(os.path.join(self.ndk_home, 'sysroot'))
-		else:
-			arch = self.arch
-			if self.is_arm():
-				arch = 'arm'
-			elif self.is_arm64():
-				arch = 'arm64'
-			path = 'platforms/android-{}/arch-{}'.format(self.api, arch)
+		arch = self.arch
+		if self.is_arm():
+			arch = 'arm'
+		elif self.is_arm64():
+			arch = 'arm64'
+		path = f'platforms/android-{self.api}/arch-{arch}'
 
-			return os.path.abspath(os.path.join(self.ndk_home, path))
+		return os.path.abspath(os.path.join(self.ndk_home, path))
 
 	def cflags(self):
-		cflags = []
-		if self.ndk_rev < 20:
-			cflags = ['--sysroot={0}'.format(self.sysroot())]
+		cflags = ['--sysroot={0}'.format(self.sysroot())] if self.ndk_rev < 20 else []
 		cflags += ['-DANDROID', '-D__ANDROID__']
 		cflags += ['-I{0}'.format(self.system_stl())]
 		if self.is_arm():
@@ -221,10 +214,7 @@ class Android:
 
 	# they go before object list
 	def linkflags(self):
-		linkflags = []
-		if self.ndk_rev < 20:
-			linkflags = ['--sysroot={0}'.format(self.sysroot())]
-		return linkflags
+		return ['--sysroot={0}'.format(self.sysroot())] if self.ndk_rev < 20 else []
 
 	def ldflags(self):
 		ldflags = ['-lgcc', '-no-canonical-prefixes']
@@ -243,40 +233,40 @@ def options(opt):
 		help='enable building for android, format: --android=<arch>,<toolchain>,<api>, example: --android=armeabi-v7a-hard,4.9,9')
 
 def configure(conf):
-	if conf.options.ANDROID_OPTS:
-		values = conf.options.ANDROID_OPTS.split(',')
-		if len(values) != 3:
-			conf.fatal('Invalid --android paramater value!')
+	if not conf.options.ANDROID_OPTS:
+		return
+	values = conf.options.ANDROID_OPTS.split(',')
+	if len(values) != 3:
+		conf.fatal('Invalid --android paramater value!')
 
-		valid_archs = ['x86', 'x86_64', 'armeabi', 'armeabi-v7a', 'armeabi-v7a-hard', 'aarch64', 'mipsel', 'mips64el']
+	valid_archs = ['x86', 'x86_64', 'armeabi', 'armeabi-v7a', 'armeabi-v7a-hard', 'aarch64', 'mipsel', 'mips64el']
 
-		if values[0] not in valid_archs:
-			conf.fatal('Unknown arch: {}. Supported: {}'.format(values[0], ', '.join(valid_archs)))
+	if values[0] not in valid_archs:
+		conf.fatal(f"Unknown arch: {values[0]}. Supported: {', '.join(valid_archs)}")
 
-		android = Android(conf, values[0], values[1], int(values[2]))
-		setattr(conf, 'android', android)
-		conf.environ['CC'] = android.cc()
-		conf.environ['CXX'] = android.cxx()
-		conf.env.CFLAGS += android.cflags()
-		conf.env.CXXFLAGS += android.cflags()
-		conf.env.LINKFLAGS += android.linkflags()
-		conf.env.LDFLAGS += android.ldflags()
+	android = Android(conf, values[0], values[1], int(values[2]))
+	setattr(conf, 'android', android)
+	conf.environ['CC'] = android.cc()
+	conf.environ['CXX'] = android.cxx()
+	conf.env.CFLAGS += android.cflags()
+	conf.env.CXXFLAGS += android.cflags()
+	conf.env.LINKFLAGS += android.linkflags()
+	conf.env.LDFLAGS += android.ldflags()
 
-		conf.env.HAVE_M = True
-		if android.is_hardfp():
-			conf.env.LIB_M = ['m_hard']
-		else: conf.env.LIB_M = ['m']
+	conf.env.HAVE_M = True
+	conf.env.LIB_M = ['m_hard'] if android.is_hardfp() else ['m']
+	conf.env.PREFIX = f'/lib/{android.arch}'
 
-		conf.env.PREFIX = '/lib/{}'.format(android.arch)
+	conf.msg(
+		'Selected Android NDK', f'{android.ndk_home}, version: {android.ndk_rev}'
+	)
+	# no need to print C/C++ compiler, as it would be printed by compiler_c/cxx
+	conf.msg('... C/C++ flags', ' '.join(android.cflags()).replace(android.ndk_home, '$NDK'))
+	conf.msg('... link flags', ' '.join(android.linkflags()).replace(android.ndk_home, '$NDK'))
+	conf.msg('... ld flags', ' '.join(android.ldflags()).replace(android.ndk_home, '$NDK'))
 
-		conf.msg('Selected Android NDK', '{}, version: {}'.format(android.ndk_home, android.ndk_rev))
-		# no need to print C/C++ compiler, as it would be printed by compiler_c/cxx
-		conf.msg('... C/C++ flags', ' '.join(android.cflags()).replace(android.ndk_home, '$NDK'))
-		conf.msg('... link flags', ' '.join(android.linkflags()).replace(android.ndk_home, '$NDK'))
-		conf.msg('... ld flags', ' '.join(android.ldflags()).replace(android.ndk_home, '$NDK'))
-
-		# conf.env.ANDROID_OPTS = android
-		conf.env.DEST_OS2 = 'android'
+	# conf.env.ANDROID_OPTS = android
+	conf.env.DEST_OS2 = 'android'
 #	else:
 #		conf.load('compiler_c compiler_cxx') # Use host compiler :)
 

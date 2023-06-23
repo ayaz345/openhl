@@ -3,7 +3,6 @@ import sys
 import struct
 import os
 
-#dummy class for stuffing the file headers into
 class FileEntry:
 	pass
 
@@ -25,7 +24,7 @@ for root, subFolders, files in os.walk(rootdir):
 		impfilename = os.path.join(root,file)
 		entry.filename = os.path.relpath(impfilename,rootdir).replace("\\","/")
 		if(entry.filename.startswith(".")):continue
-		print("pak: "+entry.filename)
+		print(f"pak: {entry.filename}")
 		with open(impfilename, "rb") as importfile:
 			pakfile.write(importfile.read())
 			entry.offset = offset

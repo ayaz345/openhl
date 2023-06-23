@@ -16,10 +16,7 @@ def etna_to_yml(xml):
         if ret is None:
             ret = 'void'
 
-        params = []
-        for p in f.findall('param'):
-            params.append('{} {}'.format(p.get('type'), p.get('name')))
-
+        params = [f"{p.get('type')} {p.get('name')}" for p in f.findall('param')]
         functions[name] = [ret] + params
 
     return functions
@@ -50,14 +47,16 @@ def lua_to_yml(xml):
                 typ = typ.rstrip()
                 if not typ.endswith('*') or kind == 'reference':
                     typ += ' *'
-                if not 'const' in typ and param.get('input', 'false') == 'true':
-                    typ = 'const ' + typ
-            p = '{} {}'.format(typ, name)
+                if (
+                    'const' not in typ
+                    and param.get('input', 'false') == 'true'
+                ):
+                    typ = f'const {typ}'
+            p = f'{typ} {name}'
             p = p.replace('* ', '*')
             params.append(p)
 
-        args = [ret]
-        args.extend(params)
+        args = [ret, *params]
         functions[cat][func] = args
     return functions
 
